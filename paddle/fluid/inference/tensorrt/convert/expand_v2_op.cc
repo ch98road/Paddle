@@ -15,25 +15,17 @@ limitations under the License. */
 #include "paddle/fluid/inference/tensorrt/convert/op_converter.h"
 
 namespace paddle {
-namespace framework {
-class Scope;
-
-namespace proto {
-class OpDesc;
-}  // namespace proto
-}  // namespace framework
-}  // namespace paddle
-
-namespace paddle {
 namespace inference {
 namespace tensorrt {
 
-class ExpandV2OpConverter : public OpConverter {
+class ExpandOpConverter : public OpConverter {
+ protected:
+    std::string op_type_;
  public:
   void operator()(const framework::proto::OpDesc& op,
                   const framework::Scope& scope,
                   bool test_mode) override {
-    VLOG(3) << "convert a paddle expand_v2 op to trt expand layer.";
+    VLOG(3) << "convert a paddle " << op_type_  << " op to trt expand layer.";
     framework::OpDesc op_desc(op, nullptr);
     auto* input = engine_->GetITensor(op_desc.Input("X")[0]);
     auto inputs = op_desc.Inputs();
@@ -43,26 +35,39 @@ class ExpandV2OpConverter : public OpConverter {
 
     nvinfer1::ITensor* shape_tensor = nullptr;
     int32_t shape_rank = 0;
-    if (inputs.find("Shape") != inputs.end() &&
-        op_desc.Input("Shape").size() >= 1) {
-      shape_tensor = engine_->GetITensor(op_desc.Input("Shape")[0]);
-      shape_rank = shape_tensor->getDimensions().d[0];
-    } else if (inputs.find("expand_shapes_tensor") != inputs.end() &&
-               op_desc.Input("expand_shapes_tensor").size() >= 1) {
-      int shape_size = op_desc.Input("expand_shapes_tensor").size();
-      std::vector<nvinfer1::ITensor*> shape_tensors;
-      for (int i = 0; i < shape_size; ++i) {
-        shape_tensors.push_back(
-            engine_->GetITensor(op_desc.Input("expand_shapes_tensor")[i]));
+    if (op_type_ == "expand_v2") {
+      if (inputs.find("Shape") != inputs.end() &&
+          op_desc.Input("Shape").size() >= 1) {
+        shape_tensor = engine_->GetITensor(op_desc.Input("Shape")[0]);
+        shape_rank = shape_tensor->getDimensions().d[0];
+      } else if (inputs.find("expand_shapes_tensor") != inputs.end() &&
+                op_desc.Input("expand_shapes_tensor").size() >= 1) {
+        int shape_size = op_desc.Input("expand_shapes_tensor").size();
+        std::vector<nvinfer1::ITensor*> shape_tensors;
+        for (int i = 0; i < shape_size; ++i) {
+          shape_tensors.push_back(
+              engine_->GetITensor(op_desc.Input("expand_shapes_tensor")[i]));
+        }
+        shape_tensor = Concat(shape_tensors);
+        shape_rank = shape_size;
+      } else {
+        std::vector<int32_t> shape =
+            PADDLE_GET_CONST(std::vector<int32_t>, op_desc.GetAttr("shape"));
+        shape_tensor = Add1DConstantLayer(shape, output_name + "_shape_tensor_");
+        shape_rank = shape.size();
       }
-      shape_tensor = Concat(shape_tensors);
-      shape_rank = shape_size;
-    } else {
-      std::vector<int32_t> shape =
-          PADDLE_GET_CONST(std::vector<int32_t>, op_desc.GetAttr("shape"));
-      shape_tensor = Add1DConstantLayer(shape, output_name + "_shape_tensor_");
-      shape_rank = shape.size();
+    }else if(op_type_ == "expand_as_v2"){
+      if (inputs.find("Y") != inputs.end()){
+        shape_tensor = engine_->GetITensor(op_desc.Input("Shape")[0]);
+        shape_rank = shape_tensor->getDimensions().nbDims;
+      }else{
+        std::vector<int32_t> shape = PADDLE_GET_CONST(
+          std::vector<int32_t>, op_desc.GetAttr("target_shape"));
+        shape_tensor = Add1DConstantLayer(shape, output_name + "_target_shape_tensor_");
+        shape_rank = shape.size();
+      }
     }
+    
 
     nvinfer1::ITensor* input_shape_tensor;
     if (rank < shape_rank) {
@@ -78,9 +83,17 @@ class ExpandV2OpConverter : public OpConverter {
       input_shape_tensor = Shape(input);
     }
 
-    auto* shuffle = TRT_ENGINE_ADD_LAYER(engine_, Shuffle, *input);
-    shuffle->setInput(1, *input_shape_tensor);
-
+    nvinfer1::ITensor* oldShape = Shape(input);
+    nvinfer1::ITensor* newInputTensor;
+    
+    if(oldShape == input_shape_tensor){
+      newInputTensor = input;
+    }else{
+      auto* shuffle = TRT_ENGINE_ADD_LAYER(engine_, Shuffle, *input);
+      shuffle->setInput(1, *input_shape_tensor);
+      newInputTensor = shuffle->getOutput(0);
+    }
+    
     std::vector<int32_t> start_vec(shape_rank, 0);
     nvinfer1::Dims start;
     start.nbDims = shape_rank;
@@ -101,17 +114,33 @@ class ExpandV2OpConverter : public OpConverter {
     auto strides_tensor = Min(one_tensor, input_sub_tensor);
 
     auto layer = TRT_ENGINE_ADD_LAYER(
-        engine_, Slice, *shuffle->getOutput(0), start, size, stride);
+        engine_, Slice, *newInputTensor, start, size, stride);
     layer->setInput(1, *starts_tensor);
     layer->setInput(2, *sizes_tensor);
     layer->setInput(3, *strides_tensor);
 
-    RreplenishLayerAndOutput(layer, "expand_v2", {output_name}, test_mode);
+    RreplenishLayerAndOutput(layer, op_type_, {output_name}, test_mode);
   }
+
+ 
 };
+class ExpandV2OpConverter : public ExpandOpConverter {
+  public:
+    ExpandV2OpConverter() {
+      op_type_ = "expand_v2";
+    }
+};
+class ExpandAsV2OpConverter : public ExpandOpConverter {
+  public:
+    ExpandAsV2OpConverter() {
+      op_type_ = "expand_as_v2";
+    }
+};
+
 
 }  // namespace tensorrt
 }  // namespace inference
 }  // namespace paddle
 
-REGISTER_TRT_OP_CONVERTER(expand_v2, ExpandV2OpConverter);
+REGISTER_TRT_OP_CONVERTER(expand_v2, ExpandOpConverter);
+REGISTER_TRT_OP_CONVERTER(expand_as_v2, ExpandAsV2OpConverter);

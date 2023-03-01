@@ -1,0 +1,19 @@
+digraph G {
+   node_11255[label="output_data(4)
+1,3,64,64" shape="box" style="rounded,filled,bold" fontname="Arial" fillcolor="#999999" color="#dddddd"]
+   node_11254[label="input_data(2)
+1,3,64,64" shape="box" style="rounded,filled,bold" fontname="Arial" fillcolor="#999999" color="#dddddd"]
+   node_11249[label="fetch(5)" style="rounded,filled,bold" shape="box" color="#303A3A" fontcolor="#ffffff" width="1.3" height="0.84" fontname="Arial"]
+   node_11252[label="feed(0)" style="rounded,filled,bold" shape="box" color="#303A3A" fontcolor="#ffffff" width="1.3" height="0.84" fontname="Arial"]
+   node_11248[label="fetch(6)" shape="box" style="rounded,filled,bold" fontname="Arial" fillcolor="#999999" color="#dddddd"]
+   node_11253[label="silu(3)" style="rounded,filled,bold" shape="box" color="#303A3A" fontcolor="#ffffff" width="1.3" height="0.84" fontname="Arial"]
+   node_11250[label="place_holder_weight(7)
+1" shape="box" style="rounded,filled,bold" fontname="Arial" color="#148b97" fontcolor="#ffffff"]
+   node_11251[label="feed(1)" shape="box" style="rounded,filled,bold" fontname="Arial" color="#148b97" fontcolor="#ffffff"]
+   node_11249->node_11248
+   node_11251->node_11252
+   node_11252->node_11254
+   node_11253->node_11255
+   node_11254->node_11253
+   node_11255->node_11249
+} // end G
