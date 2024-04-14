@@ -149,6 +149,8 @@ NO_NEED_GEN_STATIC_ONLY_APIS = [
     'dgc',
     'dpsgd',
     'embedding_grad_sparse',
+    'fake_dequantize_max_abs',
+    'fake_channel_wise_dequantize_max_abs',
     'ftrl',
     'fused_adam_',
     'fused_batch_norm_act_',

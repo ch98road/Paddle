@@ -1090,6 +1090,10 @@
     num_columns :
       support_tensor : true
 
+- op : fake_channel_wise_dequantize_max_abs
+  inputs: {x: X, scales: Scales, max_range: max_range, quant_bits: quant_bits, quant_axis: quant_axis, x_num_col_dims: x_num_col_dims}
+  outputs: {out: Out}
+
 - op : fake_channel_wise_quantize_abs_max
   extra :
     attrs : [int round_type = 1]
@@ -1097,6 +1101,10 @@
 - op : fake_channel_wise_quantize_dequantize_abs_max
   extra :
     attrs : [int round_type = 1]
+
+- op : fake_dequantize_max_abs
+  inputs: {x: X, scale: Scale, max_range: max_range}
+  outputs: {out: Out}
 
 - op : fake_quantize_abs_max
   extra :

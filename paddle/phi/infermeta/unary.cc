@@ -5754,6 +5754,15 @@ void ArrayPopInferMeta(const MetaTensor& array,
   out->set_dtype(array.dtype());
 }
 
+void FakeDequantizeInferMeta(const MetaTensor& x, MetaTensor* out) {
+  UnchangedInferMeta(x, out);
+}
+
+void FakeChannelWiseDequantizeMaxAbsInferMeta(const MetaTensor& x,
+                                              MetaTensor* out) {
+  UnchangedInferMeta(x, out);
+}
+
 }  // namespace phi
 
 PD_REGISTER_INFER_META_FN(flatten, phi::FlattenInferMeta);

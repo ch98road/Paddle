@@ -92,6 +92,8 @@ const std::unordered_set<std::string> LegacyOpList = {
     QuantizeLinear_Op::name(),
     DequantizeLinearOp::name(),
     DequantizeLinear_Op::name(),
+    FakeDequantizeMaxAbsOp::name(),
+    FakeChannelWiseDequantizeMaxAbsOp::name(),
 #ifdef PADDLE_WITH_DNNL
     paddle::onednn::dialect::LrnOp::name(),
     paddle::onednn::dialect::LrnGradOp::name(),

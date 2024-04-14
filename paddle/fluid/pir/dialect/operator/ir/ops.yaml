@@ -1907,6 +1907,26 @@
      func: dpsgd
      data_type: param
 
+- op: fake_channel_wise_dequantize_max_abs
+  args: (Tensor x, Tensor[] scales, int[] quant_bits = {8}, int quant_axis = 0, int x_num_col_dims = 1)
+  output: Tensor(out)
+  infer_meta:
+    func: FakeChannelWiseDequantizeMaxAbsInferMeta
+    param: [x]
+  kernel:
+    func: fake_channel_wise_dequantize_max_abs
+    data_type: x
+
+- op: fake_dequantize_max_abs
+  args: (Tensor x, Tensor scale, float max_range)
+  output: Tensor(out)
+  infer_meta:
+    func: FakeDequantizeInferMeta
+    param: [x]
+  kernel:
+    func: fake_dequantize_max_abs
+    data_type: x
+
 - op: ftrl
   args: (Tensor param, Tensor squared_accumulator, Tensor linear_accumulator, Tensor grad, Tensor learning_rate, float l1=0.0f, float l2=0.0f, float lr_power=-0.5f)
   output: Tensor(param_out), Tensor(squared_accum_out), Tensor(linear_accum_out)

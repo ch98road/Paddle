@@ -872,4 +872,8 @@ void ArrayPopInferMeta(const MetaTensor& array,
                        MetaTensor* out,
                        MetaConfig config = MetaConfig());
 
+void FakeDequantizeInferMeta(const MetaTensor& x, MetaTensor* out);
+
+void FakeChannelWiseDequantizeMaxAbsInferMeta(const MetaTensor& x,
+                                              MetaTensor* out);
 }  // namespace phi
