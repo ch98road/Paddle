@@ -37,6 +37,7 @@ class HOOK_ACTION:
 alignment = {
     "gpu": 256,
     "npu": 256,
+    "xpu": 256,
 }
 
 align = {
@@ -621,15 +622,6 @@ class FusedCommBuffer:
         if self._scale_after_comm and not self._use_reduce_avg:
             scale_factor = 1.0 / self._comm_group.nranks
             self.grad_storage.scale_(scale_factor)
-
-        self._reset_params_checked_in()
-
-    @imperative_base.no_grad
-    def scale_and_split_grads(self):
-        assert self._task is not None, "Task is not initialized. "
-        self._task.wait()
-        scale_factor = 1.0 / self._comm_group.nranks
-        self.grad_storage.scale_(scale_factor)
 
         self._reset_params_checked_in()
 

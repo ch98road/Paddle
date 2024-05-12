@@ -453,14 +453,8 @@ endif()
 
 # Some ops need to check results when gc is enabled
 # Currently, only ops that register NoNeedBufferVarsInference need to do this test
-set(TEST_OPS_WITH_GC
-    test_affine_channel_op
-    test_fill_zeros_like2_op
-    test_gather_nd_op
-    test_lod_reset_op
-    test_lookup_table_op
-    test_scatter_op
-    test_slice_op)
+set(TEST_OPS_WITH_GC test_affine_channel_op test_gather_nd_op test_lod_reset_op
+                     test_lookup_table_op test_scatter_op test_slice_op)
 
 foreach(TEST_OP ${TEST_OPS_WITH_GC})
   list(REMOVE_ITEM TEST_OPS ${TEST_OP})
@@ -894,7 +888,9 @@ py_test_modules(test_stride MODULES test_stride ENVS
                 FLAGS_use_stride_kernel=true)
 
 set_tests_properties(test_linalg_matrix_exp PROPERTIES TIMEOUT 120)
-set_pit_tests_properties()
+set_pir_tests_properties()
 
 set_tests_properties(test_fractional_max_pool2d_op PROPERTIES TIMEOUT 120)
 set_tests_properties(test_fractional_max_pool3d_op PROPERTIES TIMEOUT 120)
+
+set_tests_properties(test_reduce_as_op PROPERTIES TIMEOUT 30)
