@@ -2277,14 +2277,21 @@ bool AnalysisPredictor::ZeroCopyRun() {
                              config_.xpu_config_.l3_ptr,
                              config_.xpu_config_.l3_autotune_size,
                              place_);
+    VLOG(3) << "Set L3 info: size=" << config_.xpu_config_.l3_size
+            << ", ptr=" << config_.xpu_config_.l3_ptr
+            << ", autotune_size=" << config_.xpu_config_.l3_autotune_size
+            << ", place=" << place_;
   }
 #endif
 
   if (config_.new_executor_enabled()) {
+    VLOG(3) << "ch -- RunInterpreterCore executor_.";
     executor_->RunInterpreterCore();
   } else {
+    VLOG(3) << "ch -- Run executor_.";
     executor_->Run();
   }
+  // helper.h:465附近LOG
   inference::DisplayMemoryInfo(place_, "after run");
 
 #ifdef PADDLE_WITH_XPU
