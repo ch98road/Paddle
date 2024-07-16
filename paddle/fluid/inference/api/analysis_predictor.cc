@@ -2232,6 +2232,8 @@ bool AnalysisPredictor::ZeroCopyRun() {
   }
   paddle::platform::SetNumThreads(config_.cpu_math_library_num_threads());
 #ifdef PADDLE_WITH_DNNL
+  VLOG(3) << "ch -- PADDLE_WITH_DNNL. config_.use_mkldnn_ = "
+          << config_.use_mkldnn_;
   if (config_.use_mkldnn_) {
     std::vector<std::vector<int>> shape_vector;
     auto names = GetInputNames();
@@ -2273,14 +2275,16 @@ bool AnalysisPredictor::ZeroCopyRun() {
       infer_xpu_ctx->SetXContext(x_context);
     }
     infer_xpu_ctx->SetStream(predictor_stream_);
+    VLOG(3) << "ch -- Set L3 info: size=" << config_.xpu_config_.l3_size
+            << ", ptr=" << config_.xpu_config_.l3_ptr
+            << ", autotune_size=" << config_.xpu_config_.l3_autotune_size
+            << ", place=" << place_;
     infer_xpu_ctx->SetL3Info(config_.xpu_config_.l3_size,
                              config_.xpu_config_.l3_ptr,
                              config_.xpu_config_.l3_autotune_size,
                              place_);
-    VLOG(3) << "Set L3 info: size=" << config_.xpu_config_.l3_size
-            << ", ptr=" << config_.xpu_config_.l3_ptr
-            << ", autotune_size=" << config_.xpu_config_.l3_autotune_size
-            << ", place=" << place_;
+    // ch -- DebugPrint
+    infer_xpu_ctx->DebugPrint();
   }
 #endif
 
@@ -2290,12 +2294,28 @@ bool AnalysisPredictor::ZeroCopyRun() {
   } else {
     VLOG(3) << "ch -- Run executor_.";
     executor_->Run();
+    VLOG(3) << "ch -- after Run executor_.";
+    infer_xpu_ctx->DebugPrint();
   }
   // helper.h:465附近LOG
   inference::DisplayMemoryInfo(place_, "after run");
 
 #ifdef PADDLE_WITH_XPU
+  VLOG(3) << "ch -- config_.use_xpu_ = " << config_.use_xpu_
+          << ", config_.use_lite_ = " << config_.use_lite_
+          << ", infer_xpu_ctx = " << infer_xpu_ctx;
   if (config_.use_xpu_ && !config_.use_lite_ && infer_xpu_ctx != nullptr) {
+    auto output_names = GetOutputNames();
+    int output_size = 0;
+    paddle::PaddlePlace place;
+    for (auto &name : output_names) {
+      auto output_ptr =
+          GetOutputTensor(name)->data<float>(&place, &output_size);
+      VLOG(1) << "ch -- output name: " << name
+              << " output_ptr = " << output_ptr;
+      infer_xpu_ctx->SetL3Block(output_ptr);
+    }
+    // 在这里需要做的是，根据output的地址找到holder_l3_blocks_，然后删除其中output所在的项
     infer_xpu_ctx->L3CacheAutotune();
   }
 #endif
@@ -2308,6 +2328,7 @@ bool AnalysisPredictor::ZeroCopyRun() {
   // conflict when integrating it into deployment service.
   paddle::platform::SetNumThreads(1);
   if (private_context_) {
+    VLOG(3) << "ch -- SetDeviceContexts to nullptr";
     paddle::platform::DeviceContextPool::SetDeviceContexts(nullptr);
   }
 #ifdef PADDLE_WITH_DNNL
@@ -2889,6 +2910,9 @@ void AnalysisPredictor::RegisterInputHook(const InputTensorHookFunc &hookfunc) {
 
 void AnalysisPredictor::RegisterOutputHook(
     const OutputTensorHookFunc &hookfunc) {
+  // 没有调用
+  VLOG(3) << "ch -- AnalysisPredictor::RegisterOutputHook";
+  // 1. Register hook function to executor
   std::call_once(register_output_hook_flag_, [this] {
     executor_->RegisterOutputHook(
         [this](framework::OperatorBase *op, framework::Scope *scope) {
@@ -2897,6 +2921,10 @@ void AnalysisPredictor::RegisterOutputHook(
               auto *var = scope->FindVar(var_name);
               if (!var || !var->IsType<phi::DenseTensor>()) continue;
               auto dense_tensor = var->Get<phi::DenseTensor>();
+              // 没有运行～？
+              VLOG(3) << "ch -- output var: " << var_name
+                      << " type:" << var->Type();
+              VLOG(3) << "ch -- dense_tensor: " << dense_tensor.data();
               if (!dense_tensor.initialized()) continue;
               auto tensor = paddle::Tensor(
                   std::make_shared<phi::DenseTensor>(dense_tensor), var_name);

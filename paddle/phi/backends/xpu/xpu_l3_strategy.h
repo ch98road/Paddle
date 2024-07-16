@@ -16,6 +16,7 @@ limitations under the License. */
 #include <algorithm>
 #include <numeric>
 #include <vector>
+#include "glog/logging.h"
 
 namespace phi {
 
@@ -27,9 +28,27 @@ struct XPUL3CacheBlock {
     history_.clear();
   }
   void Set(void* addr, size_t size);
-  void Record(size_t size) { history_.push_back(size); }
-  void* data() { return addr_; }
+  void Record(size_t size) {
+    // 此时只是记录，addr还没有东西
+    history_.push_back(size);
+    VLOG(3) << "ch -- XPUL3CacheBlock Record: " << addr_ << ", size: " << size;
+    for (auto i : history_) {
+      VLOG(3) << "ch -- XPUL3CacheBlock history: " << i;
+    }
+  }
+  void* data() {
+    VLOG(3) << "ch -- XPUL3CacheBlock addr: " << addr_ << ", size: " << size_;
+    return addr_;
+  }
   size_t size() { return size_; }
+
+  void DebugPrint() {
+    VLOG(1) << "ch -- XPUL3CacheBlock DebugPrint";
+    VLOG(2) << "ch -- XPUL3CacheBlock history:";
+    for (auto his : history_) {
+      VLOG(2) << "ch -- history " << his;
+    }
+  }
 
  private:
   void* addr_{nullptr};

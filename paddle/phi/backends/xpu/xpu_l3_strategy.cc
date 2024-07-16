@@ -27,7 +27,10 @@ void XPUL3CacheBlock::Set(void* addr, size_t size) {
 
 void XPUL3Planner::RunAutotune(
     const std::vector<XPUL3CacheBlock*>& l3_block_dict, size_t l3_size) {
+  VLOG(3) << "ch -- l3_block_dict.size():" << l3_block_dict.size()
+          << ", plan_.empty():" << plan_.empty();
   if (l3_block_dict.size() == 0 || l3_size <= 0 || !plan_.empty()) {
+    VLOG(3) << "ch -- AutoTune not start.";
     return;
   }
   VLOG(3) << "AutoTune XPU L3 Cache Block Start.";
@@ -41,6 +44,7 @@ void XPUL3Planner::RunAutotune(
   size_t total_scores = 0;
   for (size_t block_idx = 0; block_idx < l3_block_dict.size(); block_idx++) {
     XPUL3CacheBlock* cur_block = l3_block_dict[block_idx];
+    VLOG(1) << "ch -- cur_block is " << cur_block;
     std::vector<size_t>& history = cur_block->history_;
     auto history_size = history.size();
     size_t score = 0;
