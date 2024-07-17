@@ -2305,16 +2305,16 @@ bool AnalysisPredictor::ZeroCopyRun() {
           << ", config_.use_lite_ = " << config_.use_lite_
           << ", infer_xpu_ctx = " << infer_xpu_ctx;
   if (config_.use_xpu_ && !config_.use_lite_ && infer_xpu_ctx != nullptr) {
+    // temporary fix, please do not merge.
     auto output_names = GetOutputNames();
     int output_size = 0;
     paddle::PaddlePlace place;
     for (auto &name : output_names) {
       auto output_ptr =
           GetOutputTensor(name)->data<float>(&place, &output_size);
-      VLOG(1) << "ch -- output name: " << name
-              << " output_ptr = " << output_ptr;
-      infer_xpu_ctx->SetL3Block(output_ptr);
+      infer_xpu_ctx->ClearL3Block(output_ptr);
     }
+    infer_xpu_ctx->L3CacheAutotune();
     // 在这里需要做的是，根据output的地址找到holder_l3_blocks_，然后删除其中output所在的项
     infer_xpu_ctx->L3CacheAutotune();
   }
