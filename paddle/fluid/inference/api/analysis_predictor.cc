@@ -2288,50 +2288,67 @@ bool AnalysisPredictor::ZeroCopyRun() {
   inference::DisplayMemoryInfo(place_, "after run");
 
 #ifdef PADDLE_WITH_XPU
-  if (config_.use_xpu_ && !config_.use_lite_ && infer_xpu_ctx != nullptr) {
-    //   Clear the output_tensor's l3_block, that does not participate in
-    //   L3CacheAutotune
-    if (config_.xpu_config_.l3_autotune_size > 0) {
-      // static std::once_flag output_l3block_clear;
-      // std::call_once(output_l3block_clear, [&]() {
-
-      // });
-      VLOG(4) << "Clear the output_tensor's l3_block, that does not "
-                 "participate in L3CacheAutotune.";
-      auto output_names = GetOutputNames();
-      int output_size = 0;
-      paddle::PaddlePlace place;
-      auto type_maps = GetOutputTypes();
+  if (config_.use_xpu_ && infer_xpu_ctx != nullptr &&
+      config_.xpu_config_.l3_autotune_size > 0) {
+    static std::once_flag set_output_holder_map;
+    std::call_once(set_output_holder_map, [&]() {
       auto scope = executor_->GetScope();
-      for (auto &name : output_names) {
-        auto output_type = type_maps[name];
-        void *output_ptr = nullptr;
+      VLOG(4) << "Set ouput tensor's holder.";
+      for (auto name : GetOutputNames()) {
+        // auto out_tensor = GetOutputTensor(name);
+        auto out_tensor = scope->FindVar(name)->GetMutable<phi::DenseTensor>();
 
-        auto out_tensor = GetOutputTensor(name);
-        auto out_var = scope->FindVar(name);
-        auto tensor = out_var->GetMutable<phi::DenseTensor>();
         phi::Allocation *holder =
-            reinterpret_cast<phi::DenseTensor *>(tensor)->Holder().get();
-        VLOG(1) << "Get output_tensor holder: " << holder->ptr();
-        VLOG(1) << "Get output_tensor holder: "
-                << out_tensor->data<float>(&place, &output_size);
-
-        // if (output_type == paddle_infer::DataType::FLOAT32) {
-
-        //   output_ptr =
-        //       GetOutputTensor(name)->data<float>(&place, &output_size);]
-
-        //   // VLOG(1) << "Get output_tensor: " <<
-        //   out_var->GetMutable<phi::DenseTensor>()->data();
-        //   // VLOG(1) << "Get output_ptr: " << output_ptr;
-
-        // }
-        // infer_xpu_ctx->ClearL3Block(output_ptr);
+            reinterpret_cast<phi::DenseTensor *>(out_tensor)->Holder().get();
+        infer_xpu_ctx->SetOutHolder(holder);
       }
-    }
-
+    });
     infer_xpu_ctx->L3CacheAutotune();
   }
+  // if (config_.use_xpu_ && !config_.use_lite_ && infer_xpu_ctx != nullptr) {
+  //   //   Clear the output_tensor's l3_block, that does not participate in
+  //   //   L3CacheAutotune
+  //   if (config_.xpu_config_.l3_autotune_size > 0) {
+  //     // static std::once_flag output_l3block_clear;
+  //     // std::call_once(output_l3block_clear, [&]() {
+
+  //     // });
+  //     VLOG(4) << "Clear the output_tensor's l3_block, that does not "
+  //                "participate in L3CacheAutotune.";
+  //     auto output_names = GetOutputNames();
+  //     int output_size = 0;
+  //     paddle::PaddlePlace place;
+  //     auto type_maps = GetOutputTypes();
+  //     auto scope = executor_->GetScope();
+  //     for (auto &name : output_names) {
+  //       auto output_type = type_maps[name];
+  //       void *output_ptr = nullptr;
+
+  //       auto out_tensor = GetOutputTensor(name);
+  //       auto out_var = scope->FindVar(name);
+  //       auto tensor = out_var->GetMutable<phi::DenseTensor>();
+  //       phi::Allocation *holder =
+  //           reinterpret_cast<phi::DenseTensor *>(tensor)->Holder().get();
+  //       VLOG(1) << "Get output_tensor holder: " << holder->ptr();
+  //       VLOG(1) << "Get output_tensor holder: "
+  //               << out_tensor->data<float>(&place, &output_size);
+
+  //       // if (output_type == paddle_infer::DataType::FLOAT32) {
+
+  //       //   output_ptr =
+  //       //       GetOutputTensor(name)->data<float>(&place, &output_size);]
+
+  //       //   // VLOG(1) << "Get output_tensor: " <<
+  //       //   out_var->GetMutable<phi::DenseTensor>()->data();
+  //       //   // VLOG(1) << "Get output_ptr: " << output_ptr;
+
+  //       // }
+  //       // infer_xpu_ctx->ClearL3Block(output_ptr);
+  //     }
+  //   }
+
+  //   infer_xpu_ctx->L3CacheAutotune();
+  // }
 #endif
   if (config_.xpu_config_.l3_autotune_size > 0) {
     // static std::once_flag output_l3block_clear;
