@@ -114,8 +114,12 @@ void NaiveExecutor::Run() {
     platform::CudaNvtxRangePop();
 #endif
 
+    // if(op->Type() == "concat") {
+    //   VLOG(1) << "ch -- concat op run";
+    // }
     // Update the shared_holder so that only records the max one.
     if (reuse_cache_.count(op.get())) {
+      VLOG(1) << "ch -- Update the shared_holder, type: " << op->Type();
       for (auto &it : reuse_cache_[op.get()]) {
         if (it.first->memory_size() >
             cluster_buffer_[it.second]->memory_size()) {

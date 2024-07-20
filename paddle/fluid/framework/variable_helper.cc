@@ -28,6 +28,7 @@ namespace paddle {
 namespace framework {
 
 void InitializeVariable(Variable *var, proto::VarType::Type var_type) {
+  VLOG(1) << "ch -- InitializeVariable";
   if (var_type == proto::VarType::LOD_TENSOR) {
     var->GetMutable<phi::DenseTensor>();
   } else if (var_type == proto::VarType::SELECTED_ROWS) {

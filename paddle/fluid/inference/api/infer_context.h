@@ -18,6 +18,7 @@
 #ifdef PADDLE_WITH_XPU
 #include "paddle/phi/backends/xpu/xpu_l3_strategy.h"
 #endif
+#include "glog/logging.h"
 
 namespace paddle {
 
@@ -80,6 +81,18 @@ class InferXPUContext : public phi::XPUContext {
                          int fc_autotune_level,
                          bool fc_autotune_file_writeback,
                          const phi::Place& place);
+
+  void DebugEx() const {
+    VLOG(1) << "=======================holder map============================";
+    for (auto& holders : holder_map_) {
+      auto* holder = holders.first;
+      auto& holder_pair = holders.second;
+      VLOG(1) << "ch -- holder first:" << holder->ptr()
+              << " holder second:" << holder_pair.first->ptr()
+              << "  holder second is l3:" << holder_pair.second;
+    }
+    VLOG(1) << "=============================================================";
+  }
 
  private:
   size_t l3_size_{0};

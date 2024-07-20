@@ -60,6 +60,7 @@ void* InferXPUContext::Alloc(phi::TensorBase* tensor,
     l3_block->Record(size);
     return data_ptr;
   } else if (l3_autotune_size_ > 0 && !holder_map_.empty()) {
+    DebugEx();
     phi::Allocation* holder =
         reinterpret_cast<phi::DenseTensor*>(tensor)->Holder().get();
     auto holder_iter = holder_map_.find(holder);
@@ -67,6 +68,8 @@ void* InferXPUContext::Alloc(phi::TensorBase* tensor,
       auto& holder_pair = holder_iter->second;
       auto* swap_holder = holder_pair.first;
       bool& swap_holder_is_l3 = holder_pair.second;
+      VLOG(1) << "swap_holder_is_l3: " << swap_holder_is_l3;
+
       if (swap_holder_is_l3 && swap_holder->size() >= size) {
         swap(*holder, *swap_holder);
         swap_holder_is_l3 = false;
@@ -75,6 +78,7 @@ void* InferXPUContext::Alloc(phi::TensorBase* tensor,
         swap_holder_is_l3 = true;
       }
     }
+    DebugEx();
     return DeviceContext::Alloc(
         tensor, dtype, requested_size, pinned, fake_alloc);
   } else {
@@ -260,7 +264,9 @@ void InferXPUContext::L3CacheAutotune() {
       }
     }
   } else {
+    // DebugEx();
     for (auto& holders : holder_map_) {
+      // 这里为什么要保证holder_pair.second为true
       auto* holder = holders.first;
       auto& holder_pair = holders.second;
       if (!holder_pair.second) {
@@ -268,6 +274,7 @@ void InferXPUContext::L3CacheAutotune() {
         holder_pair.second = true;
       }
     }
+    DebugEx();
   }
 }
 #endif
